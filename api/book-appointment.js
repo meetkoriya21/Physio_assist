@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: 'doctor@yourclinic.com', // Replace with the actual doctor's email
+    to: 'meetkoriya254@gmail.com', // Replace with the actual doctor's email
     subject: `New Appointment Request from ${fullName}`,
     html: `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
