@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CheckCircle2, Calendar, Clock, Phone, ArrowLeft, ChevronRight } from "lucide-react";
 import { PageHeader, Section } from "@/components/PageShell";
+import emailjs from '@emailjs/browser'; // <-- Added EmailJS import
 
 export const Route = createFileRoute("/appointment")({
   head: () => ({
@@ -45,44 +46,33 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-// ─── Helper: send via EmailJS (free tier — 200 emails/month) ────────────────
-// To enable real emails:
-// 1. Create a free account at https://www.emailjs.com
-// 2. Add a service (Gmail / SMTP) and get your Service ID
-// 3. Create an email template and get your Template ID
-// 4. Copy your Public Key from Account → API Keys
-// 5. Replace the three placeholders below and uncomment the fetch call
-const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";
-const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";
-const EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY";
+// ─── EmailJS Integration ──────────────────────────────────────────────────
+// Replace these with the actual keys from your EmailJS dashboard
+const EMAILJS_SERVICE_ID = "service_lznxegl";
+const EMAILJS_TEMPLATE_ID = "template_oh19x18";
+const EMAILJS_PUBLIC_KEY = "lw79mDJ28MM-HLw0h";
 
 async function sendAppointmentEmail(data: FormData): Promise<void> {
-  // Uncomment the block below once you add your real EmailJS keys:
-  /*
-  const payload = {
-    service_id: EMAILJS_SERVICE_ID,
-    template_id: EMAILJS_TEMPLATE_ID,
-    user_id: EMAILJS_PUBLIC_KEY,
-    template_params: {
-      from_name: data.name,
-      from_email: data.email,
-      phone: data.phone,
-      service: data.service,
-      preferred_date: data.date,
-      preferred_time: data.time,
-      message: data.message || "—",
-    },
-  };
-  const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error("EmailJS error");
-  */
-
-  // Simulated delay so the UI feels real until you wire up EmailJS:
-  await new Promise((r) => setTimeout(r, 900));
+  try {
+    // This sends the data directly to your EmailJS template without a backend
+    await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      EMAILJS_TEMPLATE_ID,
+      {
+        fullName: data.name, // Maps your form's 'name' to the template's {{fullName}}
+        email: data.email,
+        phone: data.phone,
+        service: data.service,
+        date: data.date,
+        time: data.time,
+        message: data.message || "No additional message provided.",
+      },
+      EMAILJS_PUBLIC_KEY
+    );
+  } catch (error) {
+    console.error("EmailJS error:", error);
+    throw new Error("Failed to send email");
+  }
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
