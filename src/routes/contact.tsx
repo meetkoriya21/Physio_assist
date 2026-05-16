@@ -23,7 +23,7 @@ export const Route = createFileRoute("/contact")({
 
 // ─── EmailJS config ───────────────────────────────────────────────────────────
 // Follow same steps as in appointment.tsx to enable real email delivery.
-const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";
+const EMAILJS_SERVICE_ID = "";
 const EMAILJS_TEMPLATE_ID_CONTACT = "YOUR_CONTACT_TEMPLATE_ID";
 const EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY";
 

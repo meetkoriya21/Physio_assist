@@ -4,7 +4,7 @@ import aboutImg from "@/assets/about.jpg";
 import { PageHeader, Section } from "@/components/PageShell";
 
 // ── UPDATE this to the real doctor's name ──────────────────────────────────
-const DOCTOR_NAME = "Dr. Sarah Patel"; // <-- change to real name
+const DOCTOR_NAME = "Dr. Divya Prajapati"; // <-- change to real name
 
 export const Route = createFileRoute("/about")({
   head: () => ({
