@@ -1,3 +1,4 @@
+import FAQ from '@/components/FAQ';
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ArrowRight, Activity, HeartPulse, Bike, Stethoscope, Brain, Hand, Home, Star, Plus, Minus } from "lucide-react";
@@ -157,6 +158,7 @@ function HomePage() {
           <Link to="/appointment" className="mt-8 inline-flex items-center gap-2 rounded-full bg-background px-7 py-3.5 text-sm font-semibold text-primary shadow-soft transition-transform hover:scale-[1.03]">
             Book Appointment <ArrowRight className="h-4 w-4" />
           </Link>
+          <FAQ />
         </div>
       </section>
     </>

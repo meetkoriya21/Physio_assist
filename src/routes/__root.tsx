@@ -1,3 +1,4 @@
+import FloatingWhatsApp from '@/components/FloatingWhatsApp';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -88,6 +89,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       <body>
         {children}
         <Scripts />
+        <FloatingWhatsApp />
       </body>
     </html>
   );

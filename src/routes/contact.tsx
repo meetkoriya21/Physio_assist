@@ -28,11 +28,11 @@ const EMAILJS_TEMPLATE_ID_CONTACT = "YOUR_CONTACT_TEMPLATE_ID";
 const EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY";
 
 // ─── REPLACE with your real clinic info ──────────────────────────────────────
-const CLINIC_PHONE = "+00 000 000 0000";
+const CLINIC_PHONE = "+91 9173621405";
 const CLINIC_PHONE_HREF = "tel:+00000000000";
 const CLINIC_EMAIL = "info@physioclinic.com";
 const CLINIC_EMAIL_HREF = "mailto:info@physioclinic.com";
-const CLINIC_WHATSAPP = "https://wa.me/00000000000"; // replace 00000000000 with full number incl. country code
+const CLINIC_WHATSAPP = "https://wa.me/91 917621405"; // replace 00000000000 with full number incl. country code
 const CLINIC_ADDRESS_LINE1 = "PhysioLife Clinic";
 const CLINIC_ADDRESS_LINE2 = "123 Wellness Street, City";
 // Google Maps embed URL — replace src value after setting your address in Google Maps → Share → Embed a map

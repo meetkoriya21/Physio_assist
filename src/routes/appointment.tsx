@@ -54,12 +54,12 @@ const EMAILJS_PUBLIC_KEY = "lw79mDJ28MM-HLw0h";
 
 async function sendAppointmentEmail(data: FormData): Promise<void> {
   try {
-    // This sends the data directly to your EmailJS template without a backend
+    // 1. Send the Email via EmailJS (Keep this so you still get instant alerts!)
     await emailjs.send(
       EMAILJS_SERVICE_ID,
       EMAILJS_TEMPLATE_ID,
       {
-        fullName: data.name, // Maps your form's 'name' to the template's {{fullName}}
+        fullName: data.name,
         email: data.email,
         phone: data.phone,
         service: data.service,
@@ -69,9 +69,21 @@ async function sendAppointmentEmail(data: FormData): Promise<void> {
       },
       EMAILJS_PUBLIC_KEY
     );
+
+    // 2. Save it permanently to your new MongoDB Database!
+    const dbResponse = await fetch('/api/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    if (!dbResponse.ok) {
+      console.error("Failed to save to database");
+    }
+
   } catch (error) {
-    console.error("EmailJS error:", error);
-    throw new Error("Failed to send email");
+    console.error("Error submitting appointment:", error);
+    throw new Error("Failed to process appointment");
   }
 }
 
