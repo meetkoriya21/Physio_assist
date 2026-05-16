@@ -1,51 +1,83 @@
 import mongoose from 'mongoose';
 
-// 1. Define what an Appointment looks like in the database
+// ── Schema ────────────────────────────────────────────────────────────────────
 const AppointmentSchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  phone: String,
-  service: String,
-  date: String,
-  time: String,
-  message: String,
-  status: { type: String, default: 'Pending' }, // 'Pending', 'Confirmed', or 'Completed'
-  createdAt: { type: Date, default: Date.now }
+  name:      { type: String, required: true },
+  email:     { type: String, required: true },
+  phone:     { type: String, required: true },
+  service:   { type: String, required: true },
+  date:      { type: String, required: true },
+  time:      { type: String, required: true },
+  message:   { type: String, default: '' },
+  status:    { type: String, default: 'Pending', enum: ['Pending', 'Confirmed', 'Completed'] },
+  createdAt: { type: Date,   default: Date.now },
 });
 
-// Avoid Vercel "OverwriteModelError" by checking if it already exists
-const Appointment = mongoose.models.Appointment || mongoose.model('Appointment', AppointmentSchema);
+// Avoid Vercel "OverwriteModelError"
+const Appointment =
+  mongoose.models.Appointment || mongoose.model('Appointment', AppointmentSchema);
 
-export default async function handler(req, res) {
-  // Connect to the database using your secure string
-  try {
-    if (mongoose.connection.readyState !== 1) {
-      await mongoose.connect(process.env.MONGODB_URI);
-    }
-  } catch (error) {
-    console.error("Database connection failed:", error);
-    return res.status(500).json({ error: "Database connection failed" });
+// ── DB connection (cached across Vercel warm invocations) ─────────────────────
+async function connectDB() {
+  if (mongoose.connection.readyState === 1) return; // already connected
+
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    // ❌ This is why you get 500 — the env var is missing on Vercel.
+    // Fix: add MONGODB_URI in Vercel → Project Settings → Environment Variables
+    throw new Error(
+      'MONGODB_URI environment variable is not set. ' +
+      'Go to Vercel → your project → Settings → Environment Variables and add it.'
+    );
   }
 
-  // POST Request: Save a new appointment (from the patient booking form)
+  await mongoose.connect(uri, {
+    // Recommended options for Vercel serverless
+    bufferCommands: false,
+    serverSelectionTimeoutMS: 5000,
+  });
+}
+
+// ── Handler ───────────────────────────────────────────────────────────────────
+export default async function handler(req: any, res: any) {
+  try {
+    await connectDB();
+  } catch (error: any) {
+    console.error('DB connection error:', error.message);
+    return res.status(500).json({
+      error: 'Database connection failed',
+      detail: error.message,
+    });
+  }
+
+  // POST — save a new appointment
   if (req.method === 'POST') {
     try {
-      const newAppointment = new Appointment(req.body);
-      await newAppointment.save();
-      return res.status(201).json({ success: true, message: "Appointment saved to database!" });
-    } catch (error) {
-      return res.status(400).json({ success: false, error: "Failed to save appointment" });
+      const { name, email, phone, service, date, time, message } = req.body;
+
+      // Basic validation
+      if (!name || !email || !phone || !service || !date || !time) {
+        return res.status(400).json({ success: false, error: 'Missing required fields' });
+      }
+
+      const appointment = new Appointment({ name, email, phone, service, date, time, message });
+      await appointment.save();
+
+      return res.status(201).json({ success: true, message: 'Appointment saved!' });
+    } catch (error: any) {
+      console.error('Save error:', error.message);
+      return res.status(400).json({ success: false, error: 'Failed to save appointment' });
     }
   }
 
-  // GET Request: Fetch all appointments (for your Doctor Dashboard)
+  // GET — fetch all appointments (for doctor dashboard)
   if (req.method === 'GET') {
     try {
-      // Fetch all, sort by closest date first
       const appointments = await Appointment.find().sort({ date: 1, time: 1 });
       return res.status(200).json(appointments);
-    } catch (error) {
-      return res.status(400).json({ success: false, error: "Failed to fetch appointments" });
+    } catch (error: any) {
+      console.error('Fetch error:', error.message);
+      return res.status(400).json({ success: false, error: 'Failed to fetch appointments' });
     }
   }
 
