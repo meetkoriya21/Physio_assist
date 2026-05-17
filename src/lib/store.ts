@@ -1,11 +1,7 @@
 // src/lib/store.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// All data reads/writes go to Supabase — works across all devices & browsers
-// ─────────────────────────────────────────────────────────────────────────────
 import { create } from "zustand";
 import { supabase } from "./supabase";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 export type AppointmentStatus = "pending" | "accepted" | "rejected";
 
 export type Appointment = {
@@ -19,6 +15,9 @@ export type Appointment = {
   message: string;
   status: AppointmentStatus;
   submittedAt: string;
+  paymentId?: string;
+  paymentStatus?: "paid" | "unpaid";
+  amount?: number;
 };
 
 export type BlogPost = {
@@ -41,7 +40,6 @@ const BLOG_COLORS = [
   "from-primary/30 to-cream",
 ];
 
-// ── Seed blogs inserted once into Supabase on first load ──────────────────────
 const SEED_BLOGS = [
   { title: "5 desk-job stretches to fix your posture", category: "Posture", date: "May 8, 2026", read_time: "4", excerpt: "Sitting all day quietly reshapes your spine. These five stretches take five minutes and reverse it.", status: "published", color: "from-primary/30 to-accent/40" },
   { title: "Why your knee pain isn't really your knee", category: "Pain", date: "April 22, 2026", read_time: "6", excerpt: "Most knee pain originates higher up the chain. Here's how we trace it — and treat it — at the source.", status: "published", color: "from-accent/40 to-primary-soft" },
@@ -51,16 +49,13 @@ const SEED_BLOGS = [
   { title: "Building strength after 50", category: "Wellness", date: "February 14, 2026", read_time: "8", excerpt: "Resistance training is one of the most powerful tools for healthy ageing. Here's where to start.", status: "published", color: "from-primary/30 to-cream" },
 ];
 
-// ── Store ─────────────────────────────────────────────────────────────────────
 type Store = {
-  // Appointments
   appointments: Appointment[];
   fetchAppointments: () => Promise<void>;
   addAppointment: (data: Omit<Appointment, "id" | "status" | "submittedAt">) => Promise<void>;
   updateAppointmentStatus: (id: string, status: AppointmentStatus) => Promise<void>;
   removeAppointment: (id: string) => Promise<void>;
 
-  // Blogs
   blogs: BlogPost[];
   fetchBlogs: () => Promise<void>;
   addBlog: (data: Omit<BlogPost, "id" | "color">) => Promise<void>;
@@ -70,8 +65,6 @@ type Store = {
 
 export const useStore = create<Store>((set, get) => ({
 
-  // ── Appointments ────────────────────────────────────────────────────────────
-
   appointments: [],
 
   fetchAppointments: async () => {
@@ -79,26 +72,24 @@ export const useStore = create<Store>((set, get) => ({
       .from("appointments")
       .select("*")
       .order("submitted_at", { ascending: false });
-
     if (error) { console.error("fetchAppointments:", error.message); return; }
-
-    const mapped: Appointment[] = (data ?? []).map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      phone: row.phone,
-      service: row.service,
-      date: row.date,
-      time: row.time,
-      message: row.message ?? "",
-      status: row.status as AppointmentStatus,
-      submittedAt: new Date(row.submitted_at).toLocaleString("en-GB", {
-        day: "numeric", month: "short", year: "numeric",
-        hour: "2-digit", minute: "2-digit",
-      }),
-    }));
-
-    set({ appointments: mapped });
+    set({
+      appointments: (data ?? []).map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        phone: row.phone,
+        service: row.service,
+        date: row.date,
+        time: row.time,
+        message: row.message ?? "",
+        status: row.status as AppointmentStatus,
+        submittedAt: new Date(row.submitted_at).toLocaleString("en-GB", { day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" }),
+        paymentId: row.payment_id ?? undefined,
+        paymentStatus: row.payment_status ?? "unpaid",
+        amount: row.amount ?? undefined,
+      })),
+    });
   },
 
   addAppointment: async (data) => {
@@ -111,114 +102,62 @@ export const useStore = create<Store>((set, get) => ({
       time: data.time,
       message: data.message,
       status: "pending",
+      payment_id: data.paymentId ?? null,
+      payment_status: data.paymentStatus ?? "unpaid",
+      amount: data.amount ?? null,
     });
-
     if (error) { console.error("addAppointment:", error.message); return; }
-
-    // Refresh list
     await get().fetchAppointments();
   },
 
   updateAppointmentStatus: async (id, status) => {
-    const { error } = await supabase
-      .from("appointments")
-      .update({ status })
-      .eq("id", id);
-
+    const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
     if (error) { console.error("updateAppointmentStatus:", error.message); return; }
-
-    set((state) => ({
-      appointments: state.appointments.map((a) =>
-        a.id === id ? { ...a, status } : a
-      ),
-    }));
+    set((state) => ({ appointments: state.appointments.map((a) => a.id === id ? { ...a, status } : a) }));
   },
 
   removeAppointment: async (id) => {
-    const { error } = await supabase
-      .from("appointments")
-      .delete()
-      .eq("id", id);
-
+    const { error } = await supabase.from("appointments").delete().eq("id", id);
     if (error) { console.error("removeAppointment:", error.message); return; }
-
-    set((state) => ({
-      appointments: state.appointments.filter((a) => a.id !== id),
-    }));
+    set((state) => ({ appointments: state.appointments.filter((a) => a.id !== id) }));
   },
-
-  // ── Blogs ───────────────────────────────────────────────────────────────────
 
   blogs: [],
 
   fetchBlogs: async () => {
-    const { data, error } = await supabase
-      .from("blogs")
-      .select("*")
-      .order("created_at", { ascending: false });
-
+    const { data, error } = await supabase.from("blogs").select("*").order("created_at", { ascending: false });
     if (error) { console.error("fetchBlogs:", error.message); return; }
-
-    // If no blogs in DB yet, seed them once
     if ((data ?? []).length === 0) {
       await supabase.from("blogs").insert(SEED_BLOGS);
       await get().fetchBlogs();
       return;
     }
-
-    const mapped: BlogPost[] = (data ?? []).map((row: any) => ({
-      id: row.id,
-      title: row.title,
-      category: row.category,
-      date: row.date,
-      readTime: row.read_time,
-      excerpt: row.excerpt,
-      status: row.status as "published" | "draft",
-      color: row.color ?? BLOG_COLORS[0],
-    }));
-
-    set({ blogs: mapped });
+    set({
+      blogs: (data ?? []).map((row: any) => ({
+        id: row.id, title: row.title, category: row.category, date: row.date,
+        readTime: row.read_time, excerpt: row.excerpt,
+        status: row.status as "published" | "draft",
+        color: row.color ?? BLOG_COLORS[0],
+      })),
+    });
   },
 
   addBlog: async (data) => {
     const colorIndex = get().blogs.length % BLOG_COLORS.length;
-    const { error } = await supabase.from("blogs").insert({
-      title: data.title,
-      category: data.category,
-      date: data.date,
-      read_time: data.readTime,
-      excerpt: data.excerpt,
-      status: data.status,
-      color: BLOG_COLORS[colorIndex],
-    });
-
+    const { error } = await supabase.from("blogs").insert({ title:data.title, category:data.category, date:data.date, read_time:data.readTime, excerpt:data.excerpt, status:data.status, color:BLOG_COLORS[colorIndex] });
     if (error) { console.error("addBlog:", error.message); return; }
-
     await get().fetchBlogs();
   },
 
   updateBlog: async (id, data) => {
-    const { error } = await supabase.from("blogs").update({
-      title: data.title,
-      category: data.category,
-      date: data.date,
-      read_time: data.readTime,
-      excerpt: data.excerpt,
-      status: data.status,
-    }).eq("id", id);
-
+    const { error } = await supabase.from("blogs").update({ title:data.title, category:data.category, date:data.date, read_time:data.readTime, excerpt:data.excerpt, status:data.status }).eq("id", id);
     if (error) { console.error("updateBlog:", error.message); return; }
-
     await get().fetchBlogs();
   },
 
   deleteBlog: async (id) => {
     const { error } = await supabase.from("blogs").delete().eq("id", id);
-
     if (error) { console.error("deleteBlog:", error.message); return; }
-
-    set((state) => ({
-      blogs: state.blogs.filter((b) => b.id !== id),
-    }));
+    set((state) => ({ blogs: state.blogs.filter((b) => b.id !== id) }));
   },
 }));
