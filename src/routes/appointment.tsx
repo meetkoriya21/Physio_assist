@@ -1,10 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CheckCircle2, Calendar, Clock, Phone, ArrowLeft } from "lucide-react";
 import { PageHeader, Section } from "@/components/PageShell";
+import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/appointment")({
   head: () => ({
@@ -44,46 +45,36 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-// ── Calls both API routes in parallel ────────────────────────────────────────
 async function submitBooking(data: FormData): Promise<void> {
   const [dbRes, emailRes] = await Promise.allSettled([
-    // 1. Save to MongoDB
     fetch("/api/appointments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }),
-    // 2. Send emails (clinic notification + patient auto-reply)
     fetch("/api/book-appointment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }),
   ]);
-
-  // Log results for debugging — won't block the success screen
   if (dbRes.status === "fulfilled") {
     const json = await dbRes.value.json().catch(() => ({}));
     if (!dbRes.value.ok) console.warn("DB save issue:", json);
   } else {
     console.warn("DB call failed:", dbRes.reason);
   }
-
   if (emailRes.status === "fulfilled") {
     const json = await emailRes.value.json().catch(() => ({}));
     if (!emailRes.value.ok) console.warn("Email issue:", json);
   } else {
     console.warn("Email call failed:", emailRes.reason);
   }
-
-  // We show success as long as at least one succeeded,
-  // or even if both fail — the user still gets the confirmation screen
-  // because the form data was valid. Change this logic if you need strict success.
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
 function AppointmentPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
+  const addAppointment = useStore((s) => s.addAppointment);
 
   const {
     register,
@@ -96,7 +87,21 @@ function AppointmentPage() {
 
   const onSubmit = async (data: FormData) => {
     setStatus("loading");
+
+    // ✅ Save to shared store → shows up in admin immediately
+    addAppointment({
+      name:    data.name,
+      email:   data.email,
+      phone:   data.phone,
+      service: data.service,
+      date:    data.date,
+      time:    data.time,
+      message: data.message ?? "",
+    });
+
+    // Also try API + email (won't block success screen)
     await submitBooking(data);
+
     setStatus("success");
     reset();
   };
@@ -268,7 +273,6 @@ function AppointmentPage() {
   );
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function inputCls(hasError: boolean) {
   return `mt-2 w-full rounded-xl border ${
     hasError
