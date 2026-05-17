@@ -20,12 +20,8 @@ export const Route = createFileRoute("/appointment")({
 });
 
 const SERVICES = [
-  "Back & Neck Pain",
-  "Sports Injury",
-  "Post-Surgery Rehab",
-  "Neurological Rehab",
-  "Manual Therapy",
-  "Home Visit",
+  "Back & Neck Pain", "Sports Injury", "Post-Surgery Rehab",
+  "Neurological Rehab", "Manual Therapy", "Home Visit",
 ];
 
 const TIME_SLOTS = [
@@ -45,65 +41,43 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-async function submitBooking(data: FormData): Promise<void> {
-  const [dbRes, emailRes] = await Promise.allSettled([
-    fetch("/api/appointments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }),
-    fetch("/api/book-appointment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }),
-  ]);
-  if (dbRes.status === "fulfilled") {
-    const json = await dbRes.value.json().catch(() => ({}));
-    if (!dbRes.value.ok) console.warn("DB save issue:", json);
-  } else {
-    console.warn("DB call failed:", dbRes.reason);
-  }
-  if (emailRes.status === "fulfilled") {
-    const json = await emailRes.value.json().catch(() => ({}));
-    if (!emailRes.value.ok) console.warn("Email issue:", json);
-  } else {
-    console.warn("Email call failed:", emailRes.reason);
-  }
-}
-
 function AppointmentPage() {
-  const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const addAppointment = useStore((s) => s.addAppointment);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<FormData>({ resolver: zodResolver(schema) });
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
+    resolver: zodResolver(schema),
+  });
 
   const today = new Date().toISOString().split("T")[0];
 
   const onSubmit = async (data: FormData) => {
     setStatus("loading");
+    try {
+      // ✅ Saves directly to Supabase — admin sees it instantly
+      await addAppointment({
+        name:    data.name,
+        email:   data.email,
+        phone:   data.phone,
+        service: data.service,
+        date:    data.date,
+        time:    data.time,
+        message: data.message ?? "",
+      });
 
-    // ✅ Save to shared store → shows up in admin immediately
-    addAppointment({
-      name:    data.name,
-      email:   data.email,
-      phone:   data.phone,
-      service: data.service,
-      date:    data.date,
-      time:    data.time,
-      message: data.message ?? "",
-    });
+      // Also try sending email (won't block success)
+      fetch("/api/book-appointment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }).catch(() => {});
 
-    // Also try API + email (won't block success screen)
-    await submitBooking(data);
-
-    setStatus("success");
-    reset();
+      setStatus("success");
+      reset();
+    } catch (err) {
+      console.error(err);
+      setStatus("error");
+    }
   };
 
   return (
@@ -128,7 +102,6 @@ function AppointmentPage() {
                   <h2 className="mt-6 font-display text-2xl font-semibold">Booking request received!</h2>
                   <p className="mx-auto mt-3 max-w-sm text-muted-foreground">
                     Thank you! We'll call or email you within 24 hours to confirm your session.
-                    Check your inbox for a confirmation email.
                   </p>
                   <button
                     onClick={() => setStatus("idle")}
@@ -139,6 +112,12 @@ function AppointmentPage() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+                  {status === "error" && (
+                    <div className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                      Something went wrong. Please try again.
+                    </div>
+                  )}
+
                   <div className="grid gap-5 sm:grid-cols-2">
                     <Field label="Full name *" error={errors.name?.message}>
                       <input {...register("name")} placeholder="Jane Smith" className={inputCls(!!errors.name)} />
@@ -196,7 +175,7 @@ function AppointmentPage() {
                     )}
                   </button>
                   <p className="text-center text-xs text-muted-foreground">
-                    You'll receive an auto-reply confirmation email instantly.
+                    We'll confirm your session within 24 hours.
                   </p>
                 </form>
               )}
@@ -227,11 +206,7 @@ function AppointmentPage() {
             <div className="rounded-2xl bg-card p-6 shadow-card">
               <h3 className="font-display text-base font-semibold">Clinic hours</h3>
               <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                {[
-                  ["Mon – Fri", "09:00 – 19:00"],
-                  ["Saturday",  "09:00 – 14:00"],
-                  ["Sunday",    "Closed"],
-                ].map(([day, hrs]) => (
+                {[["Mon – Fri","09:00 – 19:00"],["Saturday","09:00 – 14:00"],["Sunday","Closed"]].map(([day, hrs]) => (
                   <li key={day} className="flex justify-between">
                     <span>{day}</span>
                     <span className="font-medium text-foreground">{hrs}</span>
@@ -275,17 +250,11 @@ function AppointmentPage() {
 
 function inputCls(hasError: boolean) {
   return `mt-2 w-full rounded-xl border ${
-    hasError
-      ? "border-destructive focus:ring-destructive/20"
-      : "border-input focus:border-primary focus:ring-primary/20"
+    hasError ? "border-destructive focus:ring-destructive/20" : "border-input focus:border-primary focus:ring-primary/20"
   } bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 transition-colors`;
 }
 
-function Field({
-  label, error, children,
-}: {
-  label: string; error?: string; children: React.ReactNode;
-}) {
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="text-sm font-medium text-foreground">{label}</label>

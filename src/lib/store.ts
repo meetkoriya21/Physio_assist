@@ -1,11 +1,9 @@
 // src/lib/store.ts
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared state with localStorage persistence
-// Data survives page refresh, tab close, and navigation between pages
-// Install: bun add zustand
+// All data reads/writes go to Supabase — works across all devices & browsers
 // ─────────────────────────────────────────────────────────────────────────────
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { supabase } from "./supabase";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type AppointmentStatus = "pending" | "accepted" | "rejected";
@@ -34,16 +32,6 @@ export type BlogPost = {
   color: string;
 };
 
-// ── Seed blogs (shown by default, admin can edit/delete) ──────────────────────
-const SEED_BLOGS: BlogPost[] = [
-  { id: "seed-1", title: "5 desk-job stretches to fix your posture", category: "Posture", date: "May 8, 2026", readTime: "4", excerpt: "Sitting all day quietly reshapes your spine. These five stretches take five minutes and reverse it.", status: "published", color: "from-primary/30 to-accent/40" },
-  { id: "seed-2", title: "Why your knee pain isn't really your knee", category: "Pain", date: "April 22, 2026", readTime: "6", excerpt: "Most knee pain originates higher up the chain. Here's how we trace it — and treat it — at the source.", status: "published", color: "from-accent/40 to-primary-soft" },
-  { id: "seed-3", title: "Returning to running after injury", category: "Sports", date: "April 3, 2026", readTime: "7", excerpt: "A safe four-week protocol to rebuild mileage without re-injury, used with our sports patients.", status: "published", color: "from-primary-soft to-cream" },
-  { id: "seed-4", title: "Sleep posture and lower back pain", category: "Recovery", date: "March 18, 2026", readTime: "5", excerpt: "Small changes to how you sleep can make a big difference for chronic lower back discomfort.", status: "published", color: "from-cream to-accent/40" },
-  { id: "seed-5", title: "Manual therapy: what to expect", category: "Treatment", date: "March 1, 2026", readTime: "4", excerpt: "A quick guide to your first hands-on session — and why it works so well for stiffness and tension.", status: "published", color: "from-accent/40 to-primary/30" },
-  { id: "seed-6", title: "Building strength after 50", category: "Wellness", date: "February 14, 2026", readTime: "8", excerpt: "Resistance training is one of the most powerful tools for healthy ageing. Here's where to start.", status: "published", color: "from-primary/30 to-cream" },
-];
-
 const BLOG_COLORS = [
   "from-primary/30 to-accent/40",
   "from-accent/40 to-primary-soft",
@@ -53,93 +41,184 @@ const BLOG_COLORS = [
   "from-primary/30 to-cream",
 ];
 
-// ── Store with persist middleware ─────────────────────────────────────────────
+// ── Seed blogs inserted once into Supabase on first load ──────────────────────
+const SEED_BLOGS = [
+  { title: "5 desk-job stretches to fix your posture", category: "Posture", date: "May 8, 2026", read_time: "4", excerpt: "Sitting all day quietly reshapes your spine. These five stretches take five minutes and reverse it.", status: "published", color: "from-primary/30 to-accent/40" },
+  { title: "Why your knee pain isn't really your knee", category: "Pain", date: "April 22, 2026", read_time: "6", excerpt: "Most knee pain originates higher up the chain. Here's how we trace it — and treat it — at the source.", status: "published", color: "from-accent/40 to-primary-soft" },
+  { title: "Returning to running after injury", category: "Sports", date: "April 3, 2026", read_time: "7", excerpt: "A safe four-week protocol to rebuild mileage without re-injury, used with our sports patients.", status: "published", color: "from-primary-soft to-cream" },
+  { title: "Sleep posture and lower back pain", category: "Recovery", date: "March 18, 2026", read_time: "5", excerpt: "Small changes to how you sleep can make a big difference for chronic lower back discomfort.", status: "published", color: "from-cream to-accent/40" },
+  { title: "Manual therapy: what to expect", category: "Treatment", date: "March 1, 2026", read_time: "4", excerpt: "A quick guide to your first hands-on session — and why it works so well for stiffness and tension.", status: "published", color: "from-accent/40 to-primary/30" },
+  { title: "Building strength after 50", category: "Wellness", date: "February 14, 2026", read_time: "8", excerpt: "Resistance training is one of the most powerful tools for healthy ageing. Here's where to start.", status: "published", color: "from-primary/30 to-cream" },
+];
+
+// ── Store ─────────────────────────────────────────────────────────────────────
 type Store = {
   // Appointments
   appointments: Appointment[];
-  addAppointment: (data: Omit<Appointment, "id" | "status" | "submittedAt">) => void;
-  updateAppointmentStatus: (id: string, status: AppointmentStatus) => void;
-  removeAppointment: (id: string) => void;
+  fetchAppointments: () => Promise<void>;
+  addAppointment: (data: Omit<Appointment, "id" | "status" | "submittedAt">) => Promise<void>;
+  updateAppointmentStatus: (id: string, status: AppointmentStatus) => Promise<void>;
+  removeAppointment: (id: string) => Promise<void>;
 
   // Blogs
   blogs: BlogPost[];
-  addBlog: (data: Omit<BlogPost, "id" | "color">) => void;
-  updateBlog: (id: string, data: Omit<BlogPost, "id" | "color">) => void;
-  deleteBlog: (id: string) => void;
+  fetchBlogs: () => Promise<void>;
+  addBlog: (data: Omit<BlogPost, "id" | "color">) => Promise<void>;
+  updateBlog: (id: string, data: Omit<BlogPost, "id" | "color">) => Promise<void>;
+  deleteBlog: (id: string) => Promise<void>;
 };
 
-export const useStore = create<Store>()(
-  // ✅ persist saves everything to localStorage automatically
-  persist(
-    (set, get) => ({
-      // ── Appointments ──────────────────────────────────────────────────────
-      appointments: [],
+export const useStore = create<Store>((set, get) => ({
 
-      addAppointment: (data) =>
-        set((state) => ({
-          appointments: [
-            {
-              ...data,
-              id: `appt-${Date.now()}`,
-              status: "pending" as AppointmentStatus,
-              submittedAt: new Date().toLocaleString("en-GB", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-            },
-            ...state.appointments,
-          ],
-        })),
+  // ── Appointments ────────────────────────────────────────────────────────────
 
-      updateAppointmentStatus: (id, status) =>
-        set((state) => ({
-          appointments: state.appointments.map((a) =>
-            a.id === id ? { ...a, status } : a
-          ),
-        })),
+  appointments: [],
 
-      removeAppointment: (id) =>
-        set((state) => ({
-          appointments: state.appointments.filter((a) => a.id !== id),
-        })),
+  fetchAppointments: async () => {
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*")
+      .order("submitted_at", { ascending: false });
 
-      // ── Blogs ─────────────────────────────────────────────────────────────
-      blogs: SEED_BLOGS,
+    if (error) { console.error("fetchAppointments:", error.message); return; }
 
-      addBlog: (data) =>
-        set((state) => ({
-          blogs: [
-            {
-              ...data,
-              id: `blog-${Date.now()}`,
-              color: BLOG_COLORS[state.blogs.length % BLOG_COLORS.length],
-            },
-            ...state.blogs,
-          ],
-        })),
-
-      updateBlog: (id, data) =>
-        set((state) => ({
-          blogs: state.blogs.map((b) =>
-            b.id === id ? { ...b, ...data } : b
-          ),
-        })),
-
-      deleteBlog: (id) =>
-        set((state) => ({
-          blogs: state.blogs.filter((b) => b.id !== id),
-        })),
-    }),
-    {
-      name: "physiolife-store", // localStorage key
-      // Only persist what matters — skip derived/computed values
-      partialize: (state) => ({
-        appointments: state.appointments,
-        blogs: state.blogs,
+    const mapped: Appointment[] = (data ?? []).map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      service: row.service,
+      date: row.date,
+      time: row.time,
+      message: row.message ?? "",
+      status: row.status as AppointmentStatus,
+      submittedAt: new Date(row.submitted_at).toLocaleString("en-GB", {
+        day: "numeric", month: "short", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
       }),
+    }));
+
+    set({ appointments: mapped });
+  },
+
+  addAppointment: async (data) => {
+    const { error } = await supabase.from("appointments").insert({
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      service: data.service,
+      date: data.date,
+      time: data.time,
+      message: data.message,
+      status: "pending",
+    });
+
+    if (error) { console.error("addAppointment:", error.message); return; }
+
+    // Refresh list
+    await get().fetchAppointments();
+  },
+
+  updateAppointmentStatus: async (id, status) => {
+    const { error } = await supabase
+      .from("appointments")
+      .update({ status })
+      .eq("id", id);
+
+    if (error) { console.error("updateAppointmentStatus:", error.message); return; }
+
+    set((state) => ({
+      appointments: state.appointments.map((a) =>
+        a.id === id ? { ...a, status } : a
+      ),
+    }));
+  },
+
+  removeAppointment: async (id) => {
+    const { error } = await supabase
+      .from("appointments")
+      .delete()
+      .eq("id", id);
+
+    if (error) { console.error("removeAppointment:", error.message); return; }
+
+    set((state) => ({
+      appointments: state.appointments.filter((a) => a.id !== id),
+    }));
+  },
+
+  // ── Blogs ───────────────────────────────────────────────────────────────────
+
+  blogs: [],
+
+  fetchBlogs: async () => {
+    const { data, error } = await supabase
+      .from("blogs")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) { console.error("fetchBlogs:", error.message); return; }
+
+    // If no blogs in DB yet, seed them once
+    if ((data ?? []).length === 0) {
+      await supabase.from("blogs").insert(SEED_BLOGS);
+      await get().fetchBlogs();
+      return;
     }
-  )
-);
+
+    const mapped: BlogPost[] = (data ?? []).map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      category: row.category,
+      date: row.date,
+      readTime: row.read_time,
+      excerpt: row.excerpt,
+      status: row.status as "published" | "draft",
+      color: row.color ?? BLOG_COLORS[0],
+    }));
+
+    set({ blogs: mapped });
+  },
+
+  addBlog: async (data) => {
+    const colorIndex = get().blogs.length % BLOG_COLORS.length;
+    const { error } = await supabase.from("blogs").insert({
+      title: data.title,
+      category: data.category,
+      date: data.date,
+      read_time: data.readTime,
+      excerpt: data.excerpt,
+      status: data.status,
+      color: BLOG_COLORS[colorIndex],
+    });
+
+    if (error) { console.error("addBlog:", error.message); return; }
+
+    await get().fetchBlogs();
+  },
+
+  updateBlog: async (id, data) => {
+    const { error } = await supabase.from("blogs").update({
+      title: data.title,
+      category: data.category,
+      date: data.date,
+      read_time: data.readTime,
+      excerpt: data.excerpt,
+      status: data.status,
+    }).eq("id", id);
+
+    if (error) { console.error("updateBlog:", error.message); return; }
+
+    await get().fetchBlogs();
+  },
+
+  deleteBlog: async (id) => {
+    const { error } = await supabase.from("blogs").delete().eq("id", id);
+
+    if (error) { console.error("deleteBlog:", error.message); return; }
+
+    set((state) => ({
+      blogs: state.blogs.filter((b) => b.id !== id),
+    }));
+  },
+}));
