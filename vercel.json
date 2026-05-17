@@ -1,7 +1,17 @@
+Copy
+
 {
-  "functions": {
-    "api/*.ts": {
-      "runtime": "@vercel/node"
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  }
+  ]
 }
