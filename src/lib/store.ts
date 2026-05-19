@@ -31,6 +31,15 @@ export type BlogPost = {
   color: string;
 };
 
+export type Review = {
+  id: string;
+  name: string;
+  rating: number;
+  text: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+};
+
 const BLOG_COLORS = [
   "from-primary/30 to-accent/40",
   "from-accent/40 to-primary-soft",
@@ -50,40 +59,41 @@ const SEED_BLOGS = [
 ];
 
 type Store = {
+  // Appointments
   appointments: Appointment[];
   fetchAppointments: () => Promise<void>;
   addAppointment: (data: Omit<Appointment, "id" | "status" | "submittedAt">) => Promise<void>;
   updateAppointmentStatus: (id: string, status: AppointmentStatus) => Promise<void>;
   removeAppointment: (id: string) => Promise<void>;
 
+  // Blogs
   blogs: BlogPost[];
   fetchBlogs: () => Promise<void>;
   addBlog: (data: Omit<BlogPost, "id" | "color">) => Promise<void>;
   updateBlog: (id: string, data: Omit<BlogPost, "id" | "color">) => Promise<void>;
   deleteBlog: (id: string) => Promise<void>;
+
+  // Reviews
+  reviews: Review[];
+  fetchReviews: () => Promise<void>;
+  addReview: (data: Omit<Review, "id" | "status" | "createdAt">) => Promise<void>;
+  updateReviewStatus: (id: string, status: "approved" | "rejected") => Promise<void>;
+  deleteReview: (id: string) => Promise<void>;
 };
 
 export const useStore = create<Store>((set, get) => ({
 
+  // ── Appointments ────────────────────────────────────────────────────────────
   appointments: [],
 
   fetchAppointments: async () => {
-    const { data, error } = await supabase
-      .from("appointments")
-      .select("*")
-      .order("submitted_at", { ascending: false });
+    const { data, error } = await supabase.from("appointments").select("*").order("submitted_at", { ascending: false });
     if (error) { console.error("fetchAppointments:", error.message); return; }
     set({
       appointments: (data ?? []).map((row: any) => ({
-        id: row.id,
-        name: row.name,
-        email: row.email,
-        phone: row.phone,
-        service: row.service,
-        date: row.date,
-        time: row.time,
-        message: row.message ?? "",
-        status: row.status as AppointmentStatus,
+        id: row.id, name: row.name, email: row.email, phone: row.phone,
+        service: row.service, date: row.date, time: row.time,
+        message: row.message ?? "", status: row.status as AppointmentStatus,
         submittedAt: new Date(row.submitted_at).toLocaleString("en-GB", { day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" }),
         paymentId: row.payment_id ?? undefined,
         paymentStatus: row.payment_status ?? "unpaid",
@@ -94,14 +104,9 @@ export const useStore = create<Store>((set, get) => ({
 
   addAppointment: async (data) => {
     const { error } = await supabase.from("appointments").insert({
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      service: data.service,
-      date: data.date,
-      time: data.time,
-      message: data.message,
-      status: "pending",
+      name: data.name, email: data.email, phone: data.phone,
+      service: data.service, date: data.date, time: data.time,
+      message: data.message, status: "pending",
       payment_id: data.paymentId ?? null,
       payment_status: data.paymentStatus ?? "unpaid",
       amount: data.amount ?? null,
@@ -122,6 +127,7 @@ export const useStore = create<Store>((set, get) => ({
     set((state) => ({ appointments: state.appointments.filter((a) => a.id !== id) }));
   },
 
+  // ── Blogs ───────────────────────────────────────────────────────────────────
   blogs: [],
 
   fetchBlogs: async () => {
@@ -159,5 +165,40 @@ export const useStore = create<Store>((set, get) => ({
     const { error } = await supabase.from("blogs").delete().eq("id", id);
     if (error) { console.error("deleteBlog:", error.message); return; }
     set((state) => ({ blogs: state.blogs.filter((b) => b.id !== id) }));
+  },
+
+  // ── Reviews ─────────────────────────────────────────────────────────────────
+  reviews: [],
+
+  fetchReviews: async () => {
+    const { data, error } = await supabase.from("reviews").select("*").order("created_at", { ascending: false });
+    if (error) { console.error("fetchReviews:", error.message); return; }
+    set({
+      reviews: (data ?? []).map((row: any) => ({
+        id: row.id, name: row.name, rating: row.rating,
+        text: row.text, status: row.status,
+        createdAt: new Date(row.created_at).toLocaleString("en-GB", { day:"numeric", month:"short", year:"numeric" }),
+      })),
+    });
+  },
+
+  addReview: async (data) => {
+    const { error } = await supabase.from("reviews").insert({
+      name: data.name, rating: data.rating, text: data.text, status: "pending",
+    });
+    if (error) { console.error("addReview:", error.message); return; }
+    await get().fetchReviews();
+  },
+
+  updateReviewStatus: async (id, status) => {
+    const { error } = await supabase.from("reviews").update({ status }).eq("id", id);
+    if (error) { console.error("updateReviewStatus:", error.message); return; }
+    set((state) => ({ reviews: state.reviews.map((r) => r.id === id ? { ...r, status } : r) }));
+  },
+
+  deleteReview: async (id) => {
+    const { error } = await supabase.from("reviews").delete().eq("id", id);
+    if (error) { console.error("deleteReview:", error.message); return; }
+    set((state) => ({ reviews: state.reviews.filter((r) => r.id !== id) }));
   },
 }));
