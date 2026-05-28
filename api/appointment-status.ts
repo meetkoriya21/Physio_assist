@@ -8,6 +8,52 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY!
 );
 
+async function sendSMS(to: string, message: string) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken  = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+
+  if (!accountSid || !authToken || !fromNumber) {
+    console.log('Twilio credentials not configured. SMS not sent.');
+    return;
+  }
+
+  let formattedTo = to.trim();
+  // Ensure E.164 format for Twilio
+  if (!formattedTo.startsWith('+')) {
+    formattedTo = '+' + formattedTo;
+  }
+
+  try {
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+    const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+    
+    const body = new URLSearchParams({
+      To: formattedTo,
+      From: fromNumber,
+      Body: message,
+    });
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json();
+      console.error('Twilio SMS error:', errJson);
+    } else {
+      console.log(`Twilio SMS sent to ${formattedTo}`);
+    }
+  } catch (err: any) {
+    console.error('Failed to send Twilio SMS:', err.message);
+  }
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
 
@@ -53,6 +99,12 @@ export default async function handler(req: any, res: any) {
 
     const reviewLink = `${SITE_URL}/review?token=${token}`;
 
+    // Send confirmation SMS via Twilio
+    if (phone) {
+      const smsBody = `Hi ${name}, your appointment for ${service} at PhysioLife Clinic is confirmed for ${date} at ${time}. Leave a review: ${reviewLink}`;
+      await sendSMS(phone, smsBody);
+    }
+
     // 3. Send confirmation + review link email
     try {
       await transporter.sendMail({
@@ -97,6 +149,12 @@ export default async function handler(req: any, res: any) {
 
   // ── REJECTED ──────────────────────────────────────────────────────────────
   if (action === 'rejected') {
+    // Send rejection SMS via Twilio
+    if (phone) {
+      const smsBody = `Hi ${name}, we are unable to accommodate your appointment request for ${service} on ${date} at ${time}. Please book a new slot: https://physio-wellness-portal-main.vercel.app/appointment`;
+      await sendSMS(phone, smsBody);
+    }
+
     try {
       await transporter.sendMail({
         from:    `"PhysioLife Clinic" <${EMAIL_USER}>`,

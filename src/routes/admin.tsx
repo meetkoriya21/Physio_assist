@@ -202,6 +202,33 @@ function ApptModal({appt,onAccept,onReject,onClose}:{appt:Appointment;onAccept:(
         )}
         {appt.message&&<div style={{background:"#F9FAFB",borderRadius:10,padding:"12px",marginBottom:16}}><div style={{fontSize:10,fontWeight:700,color:"#9CA3AF",textTransform:"uppercase",marginBottom:6}}>Message</div><div style={{fontSize:13,color:"#374151",lineHeight:1.6}}>{appt.message}</div></div>}
         <div style={{fontSize:11,color:"#9CA3AF",marginBottom:16}}>Submitted: {appt.submittedAt}</div>
+        {appt.phone && (
+          <a
+            href={`https://wa.me/${appt.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+              `Hi ${appt.name}, your appointment for ${appt.service} at PhysioLife Clinic is confirmed for ${appt.date} at ${appt.time}! We look forward to seeing you.`
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              width: "100%",
+              padding: 12,
+              borderRadius: 10,
+              background: "#25D366",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 13,
+              textDecoration: "none",
+              marginBottom: 16,
+              boxSizing: "border-box"
+            }}
+          >
+            💬 Open in WhatsApp
+          </a>
+        )}
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
           {appt.status!=="accepted"&&<button onClick={onAccept} style={{flex:1,minWidth:120,padding:12,borderRadius:10,background:"#1D9E75",color:"#fff",fontWeight:700,fontSize:13,border:"none",cursor:"pointer"}}>✓ Accept & Email</button>}
           {appt.status!=="rejected"&&<button onClick={onReject} style={{flex:1,minWidth:120,padding:12,borderRadius:10,background:"#fff",color:"#B91C1C",fontWeight:700,fontSize:13,border:"2px solid #FEE2E2",cursor:"pointer"}}>✕ Reject & Email</button>}
@@ -386,7 +413,7 @@ function ReviewsTab({showToast}:{showToast:(m:string)=>void}){
   const filtered=reviews.filter(r=>filterStatus==="all"||r.status===filterStatus);
   const counts={pending:reviews.filter(r=>r.status==="pending").length,approved:reviews.filter(r=>r.status==="approved").length,rejected:reviews.filter(r=>r.status==="rejected").length};
 
-  const approve=async(id:string)=>{await updateReviewStatus(id,"approved");showToast("✓ Review approved! Now visible on homepage.");};
+  const approve=async(id:string)=>{await updateReviewStatus(id,"approved");showToast("✓ Review approved! Now visible on testimonials page.");};
   const reject=async(id:string)=>{await updateReviewStatus(id,"rejected");showToast("Review rejected.");};
   const remove=async(id:string)=>{await deleteReview(id);setDeleteId(null);showToast("Review deleted.");};
 
@@ -488,7 +515,7 @@ function Dashboard({onLogout}:{onLogout:()=>void}){
             {activeTab==="appointments"?"Patient Appointments":activeTab==="blogs"?"Blog Management":"Patient Reviews"}
           </h1>
           <p style={{fontSize:12,color:"#6B9E8A"}}>
-            {activeTab==="appointments"?"Accept or reject — patient gets email automatically.":activeTab==="blogs"?"Published posts go live on /blog instantly.":"Approve reviews to show them on the homepage."}
+            {activeTab==="appointments"?"Accept or reject — patient gets email automatically.":activeTab==="blogs"?"Published posts go live on /blog instantly.":"Approve reviews to show them on the testimonials page."}
           </p>
         </div>
         {activeTab==="appointments"&&<AppointmentsTab showToast={showToast}/>}
