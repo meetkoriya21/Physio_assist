@@ -40,7 +40,7 @@ export default async function handler(req: any, res: any) {
       name:           name,
       token:          token,
       appointment_id: appointmentId || null,
-      rating:         0,
+      rating:         5,
       text:           '',
       status:         'pending',
       token_used:     false,

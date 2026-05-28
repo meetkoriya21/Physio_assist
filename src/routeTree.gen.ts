@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TestimonialsRouteImport } from './routes/testimonials'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ServicesRouteImport } from './routes/services'
+import { Route as ReviewRouteImport } from './routes/review'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AppointmentRouteImport } from './routes/appointment'
@@ -32,6 +33,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ServicesRoute = ServicesRouteImport.update({
   id: '/services',
   path: '/services',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewRoute = ReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/appointment': typeof AppointmentRoute
   '/blog': typeof BlogRoute
   '/contact': typeof ContactRoute
+  '/review': typeof ReviewRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/testimonials': typeof TestimonialsRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/appointment': typeof AppointmentRoute
   '/blog': typeof BlogRoute
   '/contact': typeof ContactRoute
+  '/review': typeof ReviewRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/testimonials': typeof TestimonialsRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/appointment': typeof AppointmentRoute
   '/blog': typeof BlogRoute
   '/contact': typeof ContactRoute
+  '/review': typeof ReviewRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/testimonials': typeof TestimonialsRoute
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/appointment'
     | '/blog'
     | '/contact'
+    | '/review'
     | '/services'
     | '/sitemap.xml'
     | '/testimonials'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/appointment'
     | '/blog'
     | '/contact'
+    | '/review'
     | '/services'
     | '/sitemap.xml'
     | '/testimonials'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/appointment'
     | '/blog'
     | '/contact'
+    | '/review'
     | '/services'
     | '/sitemap.xml'
     | '/testimonials'
@@ -142,6 +154,7 @@ export interface RootRouteChildren {
   AppointmentRoute: typeof AppointmentRoute
   BlogRoute: typeof BlogRoute
   ContactRoute: typeof ContactRoute
+  ReviewRoute: typeof ReviewRoute
   ServicesRoute: typeof ServicesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TestimonialsRoute: typeof TestimonialsRoute
@@ -168,6 +181,13 @@ declare module '@tanstack/react-router' {
       path: '/services'
       fullPath: '/services'
       preLoaderRoute: typeof ServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review': {
+      id: '/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof ReviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -222,6 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppointmentRoute: AppointmentRoute,
   BlogRoute: BlogRoute,
   ContactRoute: ContactRoute,
+  ReviewRoute: ReviewRoute,
   ServicesRoute: ServicesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TestimonialsRoute: TestimonialsRoute,
