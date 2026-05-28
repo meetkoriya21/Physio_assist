@@ -212,7 +212,7 @@ function PaymentForm({
           <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span className="font-medium">{formData.date}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Time</span><span className="font-medium">{formData.time}</span></div>
           <div className="mt-3 pt-3 border-t border-primary/20 flex justify-between text-base font-bold text-primary">
-            <span>Total</span><span>€75.00</span>
+            <span>Total</span><span>£75.00</span>
           </div>
         </div>
       </div>
@@ -283,10 +283,15 @@ function PaymentForm({
 
       {/* QR Code / Digital Payment Flow */}
       {payMethod === "qr" && (() => {
-        const upiId = "meetkoriya254@okaxis";
-        const upiUrl = `upi://pay?pa=${upiId}&pn=PhysioLife%20Clinic&am=7500&cu=INR&tn=PhysioLife%20Appointment%20Fee`;
-        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUrl)}`;
+        const targetUrl = typeof window !== 'undefined' ? `${window.location.origin}/mock-payment?amount=75.00` : 'https://physio-wellness-portal-main.vercel.app/mock-payment?amount=75.00';
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(targetUrl)}`;
         
+        const simulatePayment = () => {
+          const mockId = `TXN-${Math.floor(Math.random() * 900000000000 + 100000000000)}`;
+          setQrTxId(mockId);
+          alert(`Simulating payment of £75.00 via digital app.\n\nMock Transaction ID '${mockId}' has been pre-filled for you! Click 'Confirm QR Payment' to submit.`);
+        };
+
         return (
           <div className="space-y-4 mb-6">
             <h3 className="font-semibold text-foreground flex items-center gap-2">
@@ -294,13 +299,18 @@ function PaymentForm({
             </h3>
             
             <div className="flex flex-col items-center justify-center bg-secondary/20 p-6 rounded-2xl border border-border/80 text-center">
-              {/* Direct Link button for mobile devices */}
-              <a
-                href={upiUrl}
+              <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-2.5 text-xs text-amber-700 font-semibold mb-4 w-full">
+                🧪 Test Mode: No real money will be charged.
+              </div>
+
+              {/* Direct App Link simulation button for testing */}
+              <button
+                type="button"
+                onClick={simulatePayment}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground px-6 py-3.5 text-sm font-bold shadow-soft transition-transform hover:scale-[1.02] cursor-pointer"
               >
-                📱 Pay Directly via GPay / PhonePe / Paytm
-              </a>
+                📱 Simulate Digital App Payment
+              </button>
               
               <div className="text-[10px] font-bold text-muted-foreground my-4 tracking-widest">— OR SCAN FROM ANOTHER DEVICE —</div>
 
@@ -312,7 +322,7 @@ function PaymentForm({
                 />
               </div>
               <p className="text-sm font-medium text-foreground max-w-sm">
-                Scan using any UPI or banking application (GPay, PhonePe, Paytm, etc.) to complete payment of <strong>7,500 INR</strong> (approx. €75).
+                Scan using GPay, PhonePe, Paytm, or any banking app to view the test invoice for <strong>£75.00</strong>.
               </p>
             </div>
 
@@ -328,7 +338,7 @@ function PaymentForm({
                 className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
               />
               <p className="text-xs text-muted-foreground mt-1.5">
-                Enter the transaction reference number from your app once the payment is completed.
+                Enter any reference ID or click the Simulate button to pre-fill it for testing.
               </p>
             </div>
           </div>
@@ -352,7 +362,7 @@ function PaymentForm({
             {paying ? (
               <><span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> Processing…</>
             ) : (
-              <><Lock className="h-4 w-4" /> Pay €75 & Confirm</>
+              <><Lock className="h-4 w-4" /> Pay £75 & Confirm</>
             )}
           </button>
         ) : (
@@ -416,7 +426,7 @@ function AppointmentPage() {
       <PageHeader
         eyebrow="Booking"
         title="Book your appointment"
-        subtitle="Secure your session with online payment — €75 per session."
+        subtitle="Secure your session with online payment — £75 per session."
       />
 
       <Section>
@@ -449,7 +459,7 @@ function AppointmentPage() {
                   </div>
                   <h2 className="mt-6 font-display text-2xl font-semibold">Booking confirmed!</h2>
                   <p className="mx-auto mt-3 max-w-sm text-muted-foreground">
-                    Payment of <strong>€75</strong> received. We'll send a confirmation email shortly.
+                    Payment of <strong>£75</strong> received. We'll send a confirmation email shortly.
                   </p>
                   <button
                     onClick={() => setStep("form")}
@@ -526,7 +536,7 @@ function AppointmentPage() {
                       <div className="text-sm font-semibold text-primary">Session fee</div>
                       <div className="text-xs text-muted-foreground">Initial assessment · 60 min</div>
                     </div>
-                    <div className="text-2xl font-bold text-primary">€75</div>
+                    <div className="text-2xl font-bold text-primary">£75</div>
                   </div>
 
                   <button
@@ -559,7 +569,7 @@ function AppointmentPage() {
             <div className="rounded-2xl bg-primary-soft p-6">
               <h3 className="font-display text-lg font-semibold text-primary">How it works</h3>
               <ol className="mt-4 space-y-3">
-                {["Fill in your details","Proceed to secure payment","Pay €75 online","Booking confirmed instantly!"].map((step,i)=>(
+                {["Fill in your details","Proceed to secure payment","Pay £75 online","Booking confirmed instantly!"].map((step,i)=>(
                   <li key={i} className="flex items-start gap-3 text-sm text-foreground">
                     <span className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{i+1}</span>
                     {step}

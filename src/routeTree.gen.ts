@@ -13,6 +13,7 @@ import { Route as TestimonialsRouteImport } from './routes/testimonials'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ReviewRouteImport } from './routes/review'
+import { Route as MockPaymentRouteImport } from './routes/mock-payment'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AppointmentRouteImport } from './routes/appointment'
@@ -38,6 +39,11 @@ const ServicesRoute = ServicesRouteImport.update({
 const ReviewRoute = ReviewRouteImport.update({
   id: '/review',
   path: '/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MockPaymentRoute = MockPaymentRouteImport.update({
+  id: '/mock-payment',
+  path: '/mock-payment',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/appointment': typeof AppointmentRoute
   '/blog': typeof BlogRoute
   '/contact': typeof ContactRoute
+  '/mock-payment': typeof MockPaymentRoute
   '/review': typeof ReviewRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/appointment': typeof AppointmentRoute
   '/blog': typeof BlogRoute
   '/contact': typeof ContactRoute
+  '/mock-payment': typeof MockPaymentRoute
   '/review': typeof ReviewRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/appointment': typeof AppointmentRoute
   '/blog': typeof BlogRoute
   '/contact': typeof ContactRoute
+  '/mock-payment': typeof MockPaymentRoute
   '/review': typeof ReviewRoute
   '/services': typeof ServicesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/appointment'
     | '/blog'
     | '/contact'
+    | '/mock-payment'
     | '/review'
     | '/services'
     | '/sitemap.xml'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/appointment'
     | '/blog'
     | '/contact'
+    | '/mock-payment'
     | '/review'
     | '/services'
     | '/sitemap.xml'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/appointment'
     | '/blog'
     | '/contact'
+    | '/mock-payment'
     | '/review'
     | '/services'
     | '/sitemap.xml'
@@ -154,6 +166,7 @@ export interface RootRouteChildren {
   AppointmentRoute: typeof AppointmentRoute
   BlogRoute: typeof BlogRoute
   ContactRoute: typeof ContactRoute
+  MockPaymentRoute: typeof MockPaymentRoute
   ReviewRoute: typeof ReviewRoute
   ServicesRoute: typeof ServicesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -188,6 +201,13 @@ declare module '@tanstack/react-router' {
       path: '/review'
       fullPath: '/review'
       preLoaderRoute: typeof ReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mock-payment': {
+      id: '/mock-payment'
+      path: '/mock-payment'
+      fullPath: '/mock-payment'
+      preLoaderRoute: typeof MockPaymentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -242,6 +262,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppointmentRoute: AppointmentRoute,
   BlogRoute: BlogRoute,
   ContactRoute: ContactRoute,
+  MockPaymentRoute: MockPaymentRoute,
   ReviewRoute: ReviewRoute,
   ServicesRoute: ServicesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

@@ -13,8 +13,8 @@ export default async function handler(req: any, res: any) {
     const { name, email, service, date, time } = req.body;
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: 7500, // €75.00 in cents
-      currency: 'eur',
+      amount: 7500, // £75.00 in cents
+      currency: 'gbp',
       metadata: { name, email, service, date, time },
       description: `PhysioLife Clinic — ${service} on ${date} at ${time}`,
       receipt_email: email,

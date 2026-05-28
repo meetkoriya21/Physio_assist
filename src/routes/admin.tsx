@@ -194,7 +194,7 @@ function ApptModal({appt,onAccept,onReject,onClose}:{appt:Appointment;onAccept:(
             <span style={{fontSize:16}}>{appt.paymentStatus==="paid"?"💳":"⏳"}</span>
             <div>
               <div style={{fontSize:12,fontWeight:700,color:appt.paymentStatus==="paid"?"#065F46":"#854D0E"}}>
-                {appt.paymentStatus==="paid"?`Paid €${appt.amount}`:"Payment Pending"}
+                {appt.paymentStatus==="paid"?`Paid £${appt.amount}`:"Payment Pending"}
               </div>
               {appt.paymentId&&<div style={{fontSize:11,color:"#9CA3AF"}}>ID: {appt.paymentId.slice(0,20)}…</div>}
             </div>
@@ -297,7 +297,7 @@ function AppointmentsTab({showToast}:{showToast:(m:string)=>void}){
                 </div>
                 <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
                   <StatusBadge status={a.status}/>
-                  {a.paymentStatus==="paid"&&<span style={{background:"#D1FAE5",color:"#065F46",fontSize:10,fontWeight:700,padding:"2px 6px",borderRadius:4}}>💳 Paid €{a.amount}</span>}
+                  {a.paymentStatus==="paid"&&<span style={{background:"#D1FAE5",color:"#065F46",fontSize:10,fontWeight:700,padding:"2px 6px",borderRadius:4}}>💳 Paid £{a.amount}</span>}
                 </div>
               </div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
