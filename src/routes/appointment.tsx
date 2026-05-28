@@ -7,6 +7,7 @@ import { CheckCircle2, Calendar, Clock, Phone, ArrowLeft, CreditCard, Lock } fro
 import { PageHeader, Section } from "@/components/PageShell";
 import { useStore } from "@/lib/store";
 import { loadStripe } from "@stripe/stripe-js";
+import qrImg from "@/assets/payment_qr_code.png";
 import {
   Elements,
   CardNumberElement,
@@ -79,8 +80,10 @@ function PaymentForm({
   const elements = useElements();
   const addAppointment = useStore((s) => s.addAppointment);
 
-  const [paying,  setPaying]  = useState(false);
-  const [error,   setError]   = useState("");
+  const [payMethod, setPayMethod] = useState<"card" | "qr">("card");
+  const [qrTxId, setQrTxId]       = useState("");
+  const [paying,  setPaying]      = useState(false);
+  const [error,   setError]       = useState("");
 
   const handlePay = async () => {
     if (!stripe || !elements) return;
@@ -153,6 +156,43 @@ function PaymentForm({
     }
   };
 
+  const handlePayQR = async () => {
+    if (!qrTxId.trim()) {
+      setError("Please enter your transaction ID or UTR number.");
+      return;
+    }
+    setError("");
+    setPaying(true);
+
+    try {
+      // 1. Save appointment to Supabase with QR reference info
+      await addAppointment({
+        name:    formData.name,
+        email:   formData.email,
+        phone:   formData.phone,
+        service: formData.service,
+        date:    formData.date,
+        time:    formData.time,
+        message: formData.message ?? "",
+        paymentId:     `QR - Ref: ${qrTxId.trim()}`,
+        paymentStatus: "paid",
+        amount:        75,
+      });
+
+      // 2. Send confirmation email
+      fetch("/api/book-appointment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      }).catch(() => {});
+
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || "Failed to submit booking. Please try again.");
+      setPaying(false);
+    }
+  };
+
   const fieldBox: React.CSSProperties = {
     border: "1.5px solid #E5E7EB",
     borderRadius: 10,
@@ -177,61 +217,161 @@ function PaymentForm({
         </div>
       </div>
 
-      {/* Card details */}
-      <div className="space-y-4 mb-6">
-        <h3 className="font-semibold text-foreground flex items-center gap-2">
-          <CreditCard className="h-4 w-4 text-primary" /> Payment Details
-        </h3>
-
-        {error && (
-          <div className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>
-        )}
-
-        <div>
-          <label className="text-sm font-medium text-foreground">Card number</label>
-          <div style={fieldBox}><CardNumberElement options={cardStyle} /></div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium text-foreground">Expiry date</label>
-            <div style={fieldBox}><CardExpiryElement options={cardStyle} /></div>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-foreground">CVC</label>
-            <div style={fieldBox}><CardCvcElement options={cardStyle} /></div>
-          </div>
-        </div>
+      {/* Payment Method Selector */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <button
+          type="button"
+          onClick={() => { setPayMethod("card"); setError(""); }}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 text-sm font-semibold transition-all cursor-pointer ${
+            payMethod === "card"
+              ? "border-primary bg-primary-soft text-primary"
+              : "border-border hover:border-primary/50 text-muted-foreground bg-card"
+          }`}
+        >
+          <CreditCard className="h-4 w-4" /> Pay with Card
+        </button>
+        <button
+          type="button"
+          onClick={() => { setPayMethod("qr"); setError(""); }}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 text-sm font-semibold transition-all cursor-pointer ${
+            payMethod === "qr"
+              ? "border-primary bg-primary-soft text-primary"
+              : "border-border hover:border-primary/50 text-muted-foreground bg-card"
+          }`}
+        >
+          <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+            <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-3 3h3v3h-3v-3zm3 3h3v3h-3v-3zm-3-3h3v3h-3v-3zm6-3h3v3h-3v-3zm0 6h3v3h-3v-3z" />
+          </svg>
+          Pay with QR Code
+        </button>
       </div>
 
-      {/* Test card hint */}
-      <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-700 mb-6">
-        🧪 <strong>Test mode:</strong> Use card <strong>4242 4242 4242 4242</strong>, any future date, any CVC.
-      </div>
+      {error && (
+        <div className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive mb-4">{error}</div>
+      )}
+
+      {/* Credit Card Flow */}
+      {payMethod === "card" && (
+        <>
+          <div className="space-y-4 mb-6">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-primary" /> Card Details
+            </h3>
+
+            <div>
+              <label className="text-sm font-medium text-foreground">Card number</label>
+              <div style={fieldBox}><CardNumberElement options={cardStyle} /></div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-foreground">Expiry date</label>
+                <div style={fieldBox}><CardExpiryElement options={cardStyle} /></div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">CVC</label>
+                <div style={fieldBox}><CardCvcElement options={cardStyle} /></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-700 mb-6">
+            🧪 <strong>Test mode:</strong> Use card <strong>4242 4242 4242 4242</strong>, any future date, any CVC.
+          </div>
+        </>
+      )}
+
+      {/* QR Code / Digital Payment Flow */}
+      {payMethod === "qr" && (() => {
+        const upiId = "meetkoriya254@okaxis";
+        const upiUrl = `upi://pay?pa=${upiId}&pn=PhysioLife%20Clinic&am=7500&cu=INR&tn=PhysioLife%20Appointment%20Fee`;
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUrl)}`;
+        
+        return (
+          <div className="space-y-4 mb-6">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
+              Pay with Digital App or QR Code
+            </h3>
+            
+            <div className="flex flex-col items-center justify-center bg-secondary/20 p-6 rounded-2xl border border-border/80 text-center">
+              {/* Direct Link button for mobile devices */}
+              <a
+                href={upiUrl}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground px-6 py-3.5 text-sm font-bold shadow-soft transition-transform hover:scale-[1.02] cursor-pointer"
+              >
+                📱 Pay Directly via GPay / PhonePe / Paytm
+              </a>
+              
+              <div className="text-[10px] font-bold text-muted-foreground my-4 tracking-widest">— OR SCAN FROM ANOTHER DEVICE —</div>
+
+              <div className="bg-white p-3 rounded-2xl border border-border/40 shadow-sm mb-4">
+                <img
+                  src={qrCodeUrl}
+                  alt="Scan UPI QR code to pay"
+                  className="w-44 h-44 object-contain"
+                />
+              </div>
+              <p className="text-sm font-medium text-foreground max-w-sm">
+                Scan using any UPI or banking application (GPay, PhonePe, Paytm, etc.) to complete payment of <strong>7,500 INR</strong> (approx. €75).
+              </p>
+            </div>
+
+            <div>
+              <label className="text-sm font-semibold text-foreground block">
+                Transaction ID / UTR Number *
+              </label>
+              <input
+                type="text"
+                value={qrTxId}
+                onChange={(e) => setQrTxId(e.target.value)}
+                placeholder="e.g. 12-digit transaction ID or reference number"
+                className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Enter the transaction reference number from your app once the payment is completed.
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="flex gap-3">
         <button
           onClick={onBack}
           disabled={paying}
-          className="flex-1 rounded-full border border-border bg-background px-6 py-3.5 text-sm font-medium text-foreground hover:border-primary hover:text-primary disabled:opacity-50"
+          className="flex-1 rounded-full border border-border bg-background px-6 py-3.5 text-sm font-medium text-foreground hover:border-primary hover:text-primary disabled:opacity-50 cursor-pointer"
         >
           <ArrowLeft className="inline h-4 w-4 mr-1" /> Back
         </button>
-        <button
-          onClick={handlePay}
-          disabled={paying || !stripe}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-soft transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {paying ? (
-            <><span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> Processing…</>
-          ) : (
-            <><Lock className="h-4 w-4" /> Pay €75 & Confirm</>
-          )}
-        </button>
+        {payMethod === "card" ? (
+          <button
+            onClick={handlePay}
+            disabled={paying || !stripe}
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-soft transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {paying ? (
+              <><span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> Processing…</>
+            ) : (
+              <><Lock className="h-4 w-4" /> Pay €75 & Confirm</>
+            )}
+          </button>
+        ) : (
+          <button
+            onClick={handlePayQR}
+            disabled={paying}
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-soft transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {paying ? (
+              <><span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> Processing…</>
+            ) : (
+              <><CheckCircle2 className="h-4 w-4" /> Confirm QR Payment</>
+            )}
+          </button>
+        )}
       </div>
 
       <p className="text-center text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1">
-        <Lock className="h-3 w-3" /> Secured by Stripe. Your card details are never stored.
+        <Lock className="h-3 w-3" /> Secure digital payments. Your details are fully encrypted.
       </p>
     </div>
   );
