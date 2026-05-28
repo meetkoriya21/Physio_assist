@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CheckCircle2, Award, Heart, Sparkles, GraduationCap, Phone } from "lucide-react";
 import aboutImg from "@/assets/about.jpg";
 import { PageHeader, Section } from "@/components/PageShell";
+import { useStore } from "@/lib/store";
+import { useEffect } from "react";
 
 // ── UPDATE this to the real doctor's name ──────────────────────────────────
 const DOCTOR_NAME = "Dr. Divya Prajapati"; // <-- change to real name
@@ -34,14 +36,44 @@ const reasons = [
   { Icon: Sparkles, title: "Modern techniques", desc: "Evidence-based manual therapy combined with the latest rehab science." },
 ];
 
-const stats = [
-  { value: "10+", label: "Years of clinical practice" },
-  { value: "2k+", label: "Patients helped" },
-  { value: "4.9★", label: "Average patient rating" },
-  { value: "6", label: "Specialist certifications" },
-];
-
 function AboutPage() {
+  const fetchAppointments = useStore((s) => s.fetchAppointments);
+  const appointments = useStore((s) => s.appointments);
+  const fetchReviews = useStore((s) => s.fetchReviews);
+  const reviews = useStore((s) => s.reviews);
+
+  useEffect(() => {
+    fetchAppointments();
+    fetchReviews();
+  }, [fetchAppointments, fetchReviews]);
+
+  // 1. Years of Practice (static baseline + calculated if needed, or simply "10+")
+  const yearsText = "10+";
+
+  // 2. Patients helped (2000 baseline + accepted appointments in DB)
+  const acceptedApptsCount = appointments.filter((a) => a.status === "accepted").length;
+  const totalPatientsHelped = 2000 + acceptedApptsCount;
+  const patientsHelpedText = totalPatientsHelped >= 1000 
+    ? `${(totalPatientsHelped / 1000).toFixed(1).replace(/\.0$/, "")}k+` 
+    : `${totalPatientsHelped}+`;
+
+  // 3. Average patient rating (computed from approved reviews)
+  const approvedReviews = reviews.filter((r) => r.status === "approved");
+  const averageRating = approvedReviews.length > 0
+    ? (approvedReviews.reduce((sum, r) => sum + r.rating, 0) / approvedReviews.length).toFixed(1)
+    : "4.9";
+  const ratingText = `${averageRating}★`;
+
+  // 4. Specialist certifications
+  const certificationsText = `${qualifications.length}`;
+
+  const stats = [
+    { value: yearsText, label: "Years of clinical practice" },
+    { value: patientsHelpedText, label: "Patients helped" },
+    { value: ratingText, label: "Average patient rating" },
+    { value: certificationsText, label: "Specialist certifications" },
+  ];
+
   return (
     <>
       <PageHeader
