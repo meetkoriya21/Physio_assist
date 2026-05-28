@@ -50,12 +50,9 @@ function AboutPage() {
   // 1. Years of Practice (static baseline + calculated if needed, or simply "10+")
   const yearsText = "10+";
 
-  // 2. Patients helped (2000 baseline + accepted appointments in DB)
+  // 2. Patients helped (original accepted appointments count in DB)
   const acceptedApptsCount = appointments.filter((a) => a.status === "accepted").length;
-  const totalPatientsHelped = 2000 + acceptedApptsCount;
-  const patientsHelpedText = totalPatientsHelped >= 1000 
-    ? `${(totalPatientsHelped / 1000).toFixed(1).replace(/\.0$/, "")}k+` 
-    : `${totalPatientsHelped}+`;
+  const patientsHelpedText = `${acceptedApptsCount}`;
 
   // 3. Average patient rating (computed from approved reviews)
   const approvedReviews = reviews.filter((r) => r.status === "approved");

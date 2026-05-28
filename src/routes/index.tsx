@@ -1,8 +1,9 @@
 import FAQ from '@/components/FAQ';
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowRight, Activity, HeartPulse, Bike, Stethoscope, Brain, Hand, Home, Plus, Minus } from "lucide-react";
 import heroImg from "@/assets/hero.jpg";
+import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -32,6 +33,23 @@ const faqs = [
 ];
 
 function HomePage() {
+  const fetchAppointments = useStore((s) => s.fetchAppointments);
+  const appointments = useStore((s) => s.appointments);
+  const fetchReviews = useStore((s) => s.fetchReviews);
+  const reviews = useStore((s) => s.reviews);
+
+  useEffect(() => {
+    fetchAppointments();
+    fetchReviews();
+  }, [fetchAppointments, fetchReviews]);
+
+  // Compute stats
+  const acceptedApptsCount = appointments.filter((a) => a.status === "accepted").length;
+  
+  const approvedReviews = reviews.filter((r) => r.status === "approved");
+  const averageRating = approvedReviews.length > 0
+    ? (approvedReviews.reduce((sum, r) => sum + r.rating, 0) / approvedReviews.length).toFixed(1)
+    : "4.9";
 
   return (
     <>
@@ -59,9 +77,9 @@ function HomePage() {
             <div className="mt-10 flex items-center gap-6 text-sm text-muted-foreground">
               <div><div className="font-display text-2xl font-bold text-foreground">10+</div> years experience</div>
               <div className="h-8 w-px bg-border" />
-              <div><div className="font-display text-2xl font-bold text-foreground">2k+</div> patients helped</div>
+              <div><div className="font-display text-2xl font-bold text-foreground">{acceptedApptsCount}</div> patients helped</div>
               <div className="h-8 w-px bg-border" />
-              <div><div className="font-display text-2xl font-bold text-foreground">4.9★</div> average rating</div>
+              <div><div className="font-display text-2xl font-bold text-foreground">{averageRating}★</div> average rating</div>
             </div>
           </div>
           <div className="relative animate-scale-in">
