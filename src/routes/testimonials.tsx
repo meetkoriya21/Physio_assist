@@ -64,11 +64,6 @@ function TestimonialsPage() {
                     <Star key={j} className={`h-4 w-4 ${j < r.rating ? "fill-current" : "opacity-30"}`} />
                   ))}
                 </div>
-                {"isRealTime" in r && (
-                  <span className="text-[10px] font-semibold text-primary bg-primary-soft px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    Verified Patient
-                  </span>
-                )}
               </div>
               <p className="mt-4 text-foreground/90">"{r.text}"</p>
               <div className="mt-6 flex items-center gap-3">

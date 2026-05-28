@@ -1,9 +1,8 @@
 import FAQ from '@/components/FAQ';
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { ArrowRight, Activity, HeartPulse, Bike, Stethoscope, Brain, Hand, Home, Star, Plus, Minus } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Activity, HeartPulse, Bike, Stethoscope, Brain, Hand, Home, Plus, Minus } from "lucide-react";
 import heroImg from "@/assets/hero.jpg";
-import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -33,11 +32,6 @@ const faqs = [
 ];
 
 function HomePage() {
-  const fetchReviews    = useStore((s) => s.fetchReviews);
-  const allReviews      = useStore((s) => s.reviews);
-  const approvedReviews = allReviews.filter((r) => r.status === "approved");
-
-  useEffect(() => { fetchReviews(); }, []);
 
   return (
     <>
@@ -113,39 +107,7 @@ function HomePage() {
         </div>
       </section>
 
-      {/* ── REVIEWS — verified patients only ── */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-        <div className="text-center mb-10">
-          <span className="text-xs font-semibold uppercase tracking-widest text-primary">Patient Stories</span>
-          <h2 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">Loved by patients across the city</h2>
-          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary">
-            ✅ All reviews are from verified patients only
-          </div>
-        </div>
 
-        {approvedReviews.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground text-sm">
-            No reviews yet — reviews are sent to patients after their confirmed appointment.
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-3">
-            {approvedReviews.map((r) => (
-              <div key={r.id} className="rounded-2xl bg-card p-7 shadow-card">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex gap-1 text-primary">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className={`h-4 w-4 ${i < r.rating ? "fill-current" : "text-muted-foreground"}`} />
-                    ))}
-                  </div>
-                  <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">✅ Verified</span>
-                </div>
-                <p className="text-foreground/90 text-sm leading-relaxed">"{r.text}"</p>
-                <div className="mt-5 text-sm font-semibold text-muted-foreground">— {r.name}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
 
       {/* FAQ */}
       <section className="bg-secondary/40">
